@@ -1,40 +1,63 @@
 import socket
-
+import sys
+import os
 import threading
 
 
-def process_client(client_socket_object: socket.socket):
-    data = client_socket_object.recv(1024).decode("utf-8")
-    separate_lines = data.split("\r\n")
-    path = separate_lines[0].split()[1]
+def parse_headers(request):
+    stringdata = request.decode("utf-8")
+    start_index = stringdata.find("GET ") + len("GET ")
+    end_index = stringdata.find(" HTTP")
+    address = stringdata[start_index:end_index]
 
-    if path == "/":
-        response = b"HTTP/1.1 200 OK\r\n\r\n"
-    elif path.startswith("/echo/"):
-        text = path.split("/echo/")[1]
-        to_response = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(text)}\r\n\r\n{text}"
-        response = to_response.encode()
-    elif path.startswith("/user-agent"):
-        text = separate_lines[2].split()[1]
-        to_response = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(text)}\r\n\r\n{text}"
-        response = to_response.encode()
+    if address.startswith("/echo/"):
+        res_string = address[6:]
+        content_length = len(res_string)
+        res = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {content_length}\r\n\r\n{res_string}".encode(
+            "utf-8"
+        )
+    elif address.startswith("/files/"):
+        filename = address[7:]
+        if sys.argv[1] == "--directory":
+            path = sys.argv[2] + filename
+            if os.path.isfile(path):
+                with open(path, "r") as file:
+                    res_string = file.read()
+                    content_length = len(res_string)
+                    res = f"HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {content_length}\r\n\r\n{res_string}".encode(
+                        "utf-8"
+                    )
+            else:
+                res = b"HTTP/1.1 404 Not Found\r\n\r\n"
+    elif address == "/user-agent":
+        res_string = [
+            data[12:]
+            for data in stringdata.split("\r\n")
+            if data.startswith("User-Agent: ")
+        ][0]
+        content_length = len(res_string)
+        res = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {content_length}\r\n\r\n{res_string}".encode(
+            "utf-8"
+        )
+    elif address == "/":
+        res = b"HTTP/1.1 200 OK\r\n\r\n"
     else:
-        response = b"HTTP/1.1 404 Not Found\r\n\r\n"
+        res = b"HTTP/1.1 404 Not Found\r\n\r\n"
+    return res
 
-    client_socket_object.send(response)
+
+def handle_client(conn):
+    req = conn.recv(1024)
+    res = parse_headers(req)
+    conn.send(res)
+    conn.close()
 
 
 def main():
-    # You can use print statements as follows for debugging, they'll be visible when running tests.
-    print("Logs from your program will appear here!")
     server_socket = socket.create_server(("localhost", 4221), reuse_port=True)
     while True:
-        (
-            client_socket_object,
-            address_info_port,
-        ) = server_socket.accept()  # wait for client
-
-        threading.Thread(target=process_client, args=(client_socket_object,)).start()
+        conn, _ = server_socket.accept()  # wait for client
+        threading.Thread(target=handle_client, args=(conn,)).start()
 
 
 if __name__ == "__main__":
