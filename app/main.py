@@ -12,9 +12,16 @@ def main():
     if path == "/":
         response = b"HTTP/1.1 200 OK\r\n\r\n"
     elif path.startswith("/echo/"):
-        text = path.replace("/echo/", "")
-        response = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(text)}\r\n\r\n{text}".encode(
-            "utf-8")
+        text = path.split("/echo/")[1]
+        response = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(text)}\r\n\r\n{text}"
+        response = response.encode()
+        to_response = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(text)}\r\n\r\n{text}"
+        response = to_response.encode()
+    elif path.startswith("/user-agent"):
+        text = separate_lines[2].split()[1]
+        to_response = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(text)}\r\n\r\n{text}"
+
+        response = to_response.encode()
     else:
         response = b"HTTP/1.1 404 Not Found\r\n\r\n"
     client_socket_object.send(response)
