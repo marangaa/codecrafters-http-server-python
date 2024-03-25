@@ -14,3 +14,7 @@ def main():
     else:
         response = b"HTTP/1.1 404 Not Found\r\n\r\n"
     client_socket_object.send(response)
+
+
+if __name__ == "__main__":
+    main()
