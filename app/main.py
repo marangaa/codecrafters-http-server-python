@@ -11,6 +11,10 @@ def main():
     path = separate_lines[0].split()[1]
     if path == "/":
         response = b"HTTP/1.1 200 OK\r\n\r\n"
+    elif path.startswith("/echo/"):
+        text = path.replace("/echo/", "")
+        response = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(text)}\r\n\r\n{text}".encode(
+            "utf-8")
     else:
         response = b"HTTP/1.1 404 Not Found\r\n\r\n"
     client_socket_object.send(response)
