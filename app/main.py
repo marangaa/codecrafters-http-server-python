@@ -20,6 +20,7 @@ def main():
         response = f"HTTP/1.1 404 Not Found\r\n"
 
     client_socket.send(response)
+    client_socket.close()
 
 
 if __name__ == "__main__":
